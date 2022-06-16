@@ -21,3 +21,19 @@ html{
     left: 0;
     outline: none;
 }
+
+#infos{
+    background-color: rgba(56, 55, 55, 0.736);
+    padding: 20px;
+    z-index: 99;
+    color: #ffefef;
+    position: absolute;
+    margin: 20px;
+    top: 0;
+    right: 0;
+    visibility: hidden;
+}
+
+#infos p{
+    margin-bottom: 5px;
+}

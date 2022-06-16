@@ -232,6 +232,67 @@ renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
 /**
+ * Raycaster
+ */
+ const raycaster = new THREE.Raycaster();
+
+ let currentIntersect = null;
+ let lastClicked = null;
+
+ const objectsToTest = pins;
+
+  /**
+ * Mouse
+ */
+const mouse = new THREE.Vector2()
+let drag = true;
+
+window.addEventListener('mousemove', (event) =>
+{
+    mouse.x = event.clientX / sizes.width * 2 - 1;
+    mouse.y = - (event.clientY / sizes.height) * 2 + 1;
+
+    drag = true;
+})
+
+window.addEventListener('mousedown', () => {
+    drag = false;
+ })
+
+ window.addEventListener('click', () =>
+{
+    if(drag == false){
+        let infos = document.querySelector("#infos");
+        if(currentIntersect)
+        {
+            if(lastClicked != null){
+                if(currentIntersect != lastClicked){
+                    //lastClicked.object.material.color.set('#FF0000');
+                }
+            }
+            //currentIntersect.object.material.color.set('#00FF00');
+            lastClicked = currentIntersect;
+            
+            infos.querySelector("#region").innerHTML = currentIntersect.object.region;
+            infos.querySelector("#lat").innerHTML = currentIntersect.object.lat;
+            infos.querySelector("#lon").innerHTML = currentIntersect.object.lon;
+            infos.querySelector("#depth").innerHTML = currentIntersect.object.depth;
+            infos.querySelector("#mag").innerHTML = currentIntersect.object.mag;
+            let date = new Date(currentIntersect.object.time);
+            infos.querySelector("#time").innerHTML = date.toLocaleString('en-GB');
+
+            infos.style.visibility = "visible";
+        }
+        else{
+            if(lastClicked != null){
+                //lastClicked.object.material.color.set('#FF0000');
+                infos.style.visibility = "hidden";
+            }
+        }
+    }
+})
+
+/**
  * Animate
  */
 const clock = new THREE.Clock();
@@ -241,6 +302,49 @@ const tick = () =>
     const elapsedTime = clock.getElapsedTime();
 
     clouds.rotation.y = elapsedTime * 0.005;
+
+    // Cast a ray
+    const rayOrigin = new THREE.Vector3(- 3, 0, 0)
+    const rayDirection = new THREE.Vector3(1, 0, 0)
+    rayDirection.normalize()
+    
+    raycaster.set(rayOrigin, rayDirection)
+
+    raycaster.setFromCamera(mouse, camera)
+    
+    const intersects = raycaster.intersectObjects(objectsToTest);
+
+    for(const intersect of intersects)
+    {
+        intersect.object.scale.set(2, 2, 2);
+    }
+
+    for(const object of objectsToTest)
+    {
+        if(!intersects.find(intersect => intersect.object === object))
+        {
+            object.scale.set(1, 1, 1);
+        }
+    }
+
+    if(intersects.length)
+    {
+        if(!currentIntersect)
+        {
+            //console.log('mouse enter')
+        }
+
+        currentIntersect = intersects[0]
+    }
+    else
+    {
+        if(currentIntersect)
+        {
+            //console.log('mouse leave')
+        }
+        
+        currentIntersect = null;
+    }
 
     // Update controls
     controls.update();
