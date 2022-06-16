@@ -10,6 +10,10 @@ body
     overflow: hidden;
 }
 
+html{
+    background: #ADD8E6;
+}
+
 .webgl
 {
     position: fixed;
