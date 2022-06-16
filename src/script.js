@@ -4,11 +4,124 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as dat from 'lil-gui';
 
 /**
+ * Functions
+ */
+
+/**
+ * Récupère une liste des 20 derniers tremblements de terre
+ */
+ async function fetchEarthquakes() {
+    const response = await fetch('https://www.seismicportal.eu/fdsnws/event/1/query?limit=20&format=json');
+    // waits until the request completes...
+    return await response.json();
+}
+
+/**
+ * Converti une latitude et longitude en une position x,y et z
+ */
+function convertLatLonToCartesian(lat, lon){
+    var phi = (90-lat) * (Math.PI/180);
+    var theta = (lon+180) * (Math.PI/180);
+
+    let x = -(Math.sin(phi) * Math.cos(theta));
+    let y = Math.cos(phi);
+    let z = (Math.sin(phi) * Math.sin(theta));
+    return {
+        x, y, z
+    }
+}
+
+/**
+ * Crée un marqueur pour chaque tremblement de terre
+ */
+export async function createPins(){
+    const earthquakesData = await fetchEarthquakes();
+
+    //console.log(earthquakesData.features)
+
+    earthquakesData.features.forEach(earthquake => {
+        const pin = new THREE.Mesh(
+            new THREE.SphereGeometry(0.015, 20, 20),
+            new THREE.MeshBasicMaterial({color: 0xff0000})
+        )
+
+        // Enregistre les propriétés du tremblement de terre
+        pin.mag = earthquake.properties.mag;
+        pin.lat = earthquake.properties.lat;
+        pin.lon = earthquake.properties.lon;
+        pin.depth = earthquake.properties.depth;
+        pin.region = earthquake.properties.flynn_region;
+        pin.time = earthquake.properties.time;
+
+        // Donne une couleur au marqueur selon la magnitude
+        switch (Math.floor(earthquake.properties.mag)) {
+            case 0:
+                pin.material.color.set("#6fcdb1");
+                break;
+            
+            case 1:
+                pin.material.color.set("#6fcdb1");
+                break;
+
+            case 2:
+                pin.material.color.set("#67d276");
+                break;
+
+            case 3:
+                pin.material.color.set("#94d158");
+                break;
+
+            case 4:
+                pin.material.color.set("#c2cc49");
+                break;
+
+            case 5:
+                pin.material.color.set("#cdb659");
+                break;
+
+            case 6:
+                pin.material.color.set("#c79443");
+                break;
+
+            case 7:
+                pin.material.color.set("#c66629");
+                break;
+
+            case 8:
+                pin.material.color.set("#ce3114");
+                break;
+
+            case 9:
+                pin.material.color.set("#cc0001");
+                break;
+
+            case 10:
+                pin.material.color.set("#ae0001");
+                break;
+
+            default:
+                break;
+        }
+
+        let pos = convertLatLonToCartesian(earthquake.properties.lat, earthquake.properties.lon);
+
+        pin.position.set(pos.x, pos.y, pos.z)
+
+        scene.add(pin);
+
+        pins.push(pin);
+    });
+}
+
+/**
  * Base
  */
 // Debug
 const gui = new dat.GUI();
 gui.hide();
+
+// Propriétés
+const pins = [];
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -51,6 +164,9 @@ const clouds = new THREE.Mesh(
     })
 );
 scene.add(clouds);
+
+// Marqueurs
+createPins();
 
 /**
  * Lights
