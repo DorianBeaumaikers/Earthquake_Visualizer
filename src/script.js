@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as dat from 'lil-gui';
+import { gsap } from 'gsap'
 
 /**
  * Functions
@@ -214,13 +215,69 @@ const canvas = document.querySelector('canvas.webgl');
 const scene = new THREE.Scene();
 
 /**
+ * Loaders
+ */
+ const loadingBarElement = document.querySelector('.loading-bar');
+ const loadingManager = new THREE.LoadingManager(
+    // Loaded
+    () =>
+    {
+        window.setTimeout(() =>
+        {
+            gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0, delay: 1 });
+
+            loadingBarElement.classList.add('ended');
+            loadingBarElement.style.transform = '';
+
+            document.querySelector("#openPanel").style.opacity = 100;
+            document.querySelector("#openMoreInfos").style.opacity = 100;
+        }, 500)
+    },
+
+    // Progress
+    (itemUrl, itemsLoaded, itemsTotal) =>
+    {
+        const progressRatio = itemsLoaded / itemsTotal;
+        loadingBarElement.style.transform = `scaleX(${progressRatio})`;
+    }
+)
+
+/**
  * Textures
  */
- const textureLoader = new THREE.TextureLoader();
+ const textureLoader = new THREE.TextureLoader(loadingManager);
  const earthTexture = textureLoader.load('/textures/earth/earth_texture.jpg');
  const earthHeightTexture = textureLoader.load('/textures/earth/earth_height.jpg');
  const earthSpecularTexture = textureLoader.load('/textures/earth/earth_specular.jpg');
  const cloudsTexture = textureLoader.load('/textures/earth/clouds.png');
+
+ /**
+ * Overlay
+ */
+  const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1)
+  const overlayMaterial = new THREE.ShaderMaterial({
+     transparent: true,
+     uniforms:
+     {
+         uAlpha: { value: 1 }
+     },
+     vertexShader: `
+         void main()
+         {
+             gl_Position = vec4(position, 1.0);
+         }
+     `,
+     fragmentShader: `
+         uniform float uAlpha;
+ 
+         void main()
+         {
+             gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+         }
+     `
+ })
+  const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
+  scene.add(overlay)
 
 /**
  * Earth
