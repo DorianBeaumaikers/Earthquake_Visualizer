@@ -14,7 +14,12 @@ import { gsap } from 'gsap'
  async function fetchEarthquakes(limit = 20, mag = 0) {
     const response = await fetch('https://www.seismicportal.eu/fdsnws/event/1/query?orderby=time&limit='+limit+'&format=json&minmag='+mag);
     // waits until the request completes...
-    return await response.json();
+    if(response["status"] == 204){
+        return false
+    }
+    else{
+        return await response.json();
+    }
 }
 
 /**
@@ -38,97 +43,102 @@ function convertLatLonToCartesian(lat, lon, radius){
 export async function createPins(limit, mag){
     const earthquakesData = await fetchEarthquakes(limit, mag);
 
-    console.log(earthquakesData.features)
-
     let listeDiv = document.querySelector("#liste");
 
-    earthquakesData.features.forEach(earthquake => {
-
-        let date = new Date(earthquake.properties.time);
-
-        let li = document.createElement("li");
-        li.innerHTML = `
-                <form class="quake">
-                    <input type="hidden" name="region" value="${earthquake.properties.flynn_region}">
-                    <input type="hidden" name="lat" value="${earthquake.properties.lat}">
-                    <input type="hidden" name="lon" value="${earthquake.properties.lon}">
-                    <input type="hidden" name="depth" value="${earthquake.properties.depth}">
-                    <input type="hidden" name="mag" value="${earthquake.properties.mag}">
-                    <input type="hidden" name="time" value="${date.toLocaleString('en-GB')}">
-                    <p class="time">${date.toLocaleString('en-GB')}</p>
-                    <input type="submit" value="Locate">
-                    <p>${earthquake.properties.flynn_region} - ${earthquake.properties.mag}</p>
-                </form>
+    if(earthquakesData == false){
+        listeDiv.innerHTML = `
+            <li>No earthquakes found.</li>
         `;
-        listeDiv.append(li);
+    }
+    else{
+        earthquakesData.features.forEach(earthquake => {
 
-        const pin = new THREE.Mesh(
-            new THREE.SphereGeometry(0.015, 20, 20),
-            new THREE.MeshBasicMaterial({color: 0xff0000})
-        )
-
-        // Enregistre les propriétés du tremblement de terre
-        pin.mag = earthquake.properties.mag;
-        pin.lat = earthquake.properties.lat;
-        pin.lon = earthquake.properties.lon;
-        pin.depth = earthquake.properties.depth;
-        pin.region = earthquake.properties.flynn_region;
-        pin.time = date.toLocaleString('en-GB');
-
-        // Donne une couleur au marqueur selon la magnitude
-        switch (Math.floor(earthquake.properties.mag)) {
-            case 0:
-                pin.material.color.set("#6fcdb1");
-                break;
-            
-            case 1:
-                pin.material.color.set("#6fcdb1");
-                break;
-
-            case 2:
-                pin.material.color.set("#67d276");
-                break;
-
-            case 3:
-                pin.material.color.set("#94d158");
-                break;
-
-            case 4:
-                pin.material.color.set("#c2cc49");
-                break;
-
-            case 5:
-                pin.material.color.set("#cdb659");
-                break;
-
-            case 6:
-                pin.material.color.set("#c79443");
-                break;
-
-            case 7:
-                pin.material.color.set("#c66629");
-                break;
-
-            case 8:
-                pin.material.color.set("#ce3114");
-                break;
-
-            case 9:
-                pin.material.color.set("#cc0001");
-                break;
-
-            default:
-                break;
-        }
-
-        let pos = convertLatLonToCartesian(earthquake.properties.lat, earthquake.properties.lon, 1);
-
-        pin.position.set(pos.x, pos.y, pos.z)
-
-        scene.add(pin);
-
-        pins.push(pin);
-    });
+            let date = new Date(earthquake.properties.time);
+    
+            let li = document.createElement("li");
+            li.innerHTML = `
+                    <form class="quake">
+                        <input type="hidden" name="region" value="${earthquake.properties.flynn_region}">
+                        <input type="hidden" name="lat" value="${earthquake.properties.lat}">
+                        <input type="hidden" name="lon" value="${earthquake.properties.lon}">
+                        <input type="hidden" name="depth" value="${earthquake.properties.depth}">
+                        <input type="hidden" name="mag" value="${earthquake.properties.mag}">
+                        <input type="hidden" name="time" value="${date.toLocaleString('en-GB')}">
+                        <p class="time">${date.toLocaleString('en-GB')}</p>
+                        <input type="submit" value="Locate">
+                        <p>${earthquake.properties.flynn_region} - ${earthquake.properties.mag}</p>
+                    </form>
+            `;
+            listeDiv.append(li);
+    
+            const pin = new THREE.Mesh(
+                new THREE.SphereGeometry(0.015, 20, 20),
+                new THREE.MeshBasicMaterial({color: 0xff0000})
+            )
+    
+            // Enregistre les propriétés du tremblement de terre
+            pin.mag = earthquake.properties.mag;
+            pin.lat = earthquake.properties.lat;
+            pin.lon = earthquake.properties.lon;
+            pin.depth = earthquake.properties.depth;
+            pin.region = earthquake.properties.flynn_region;
+            pin.time = date.toLocaleString('en-GB');
+    
+            // Donne une couleur au marqueur selon la magnitude
+            switch (Math.floor(earthquake.properties.mag)) {
+                case 0:
+                    pin.material.color.set("#6fcdb1");
+                    break;
+                
+                case 1:
+                    pin.material.color.set("#6fcdb1");
+                    break;
+    
+                case 2:
+                    pin.material.color.set("#67d276");
+                    break;
+    
+                case 3:
+                    pin.material.color.set("#94d158");
+                    break;
+    
+                case 4:
+                    pin.material.color.set("#c2cc49");
+                    break;
+    
+                case 5:
+                    pin.material.color.set("#cdb659");
+                    break;
+    
+                case 6:
+                    pin.material.color.set("#c79443");
+                    break;
+    
+                case 7:
+                    pin.material.color.set("#c66629");
+                    break;
+    
+                case 8:
+                    pin.material.color.set("#ce3114");
+                    break;
+    
+                case 9:
+                    pin.material.color.set("#cc0001");
+                    break;
+    
+                default:
+                    break;
+            }
+    
+            let pos = convertLatLonToCartesian(earthquake.properties.lat, earthquake.properties.lon, 1);
+    
+            pin.position.set(pos.x, pos.y, pos.z)
+    
+            scene.add(pin);
+    
+            pins.push(pin);
+        });
+    }
 
     document.querySelectorAll("#liste .quake").forEach(quake => {
         quake.onsubmit = function(e){
@@ -231,6 +241,13 @@ const scene = new THREE.Scene();
 
             document.querySelector("#openPanel").style.opacity = 100;
             document.querySelector("#openMoreInfos").style.opacity = 100;
+
+            window.setTimeout(() =>
+            {
+                overlayMaterial.depthWrite = false;
+
+            }, 1000)
+
         }, 500)
     },
 
@@ -247,7 +264,6 @@ const scene = new THREE.Scene();
  */
  const textureLoader = new THREE.TextureLoader(loadingManager);
  const earthTexture = textureLoader.load('/textures/earth/earth_texture.jpg');
- const earthHeightTexture = textureLoader.load('/textures/earth/earth_height.jpg');
  const earthSpecularTexture = textureLoader.load('/textures/earth/earth_specular.jpg');
  const cloudsTexture = textureLoader.load('/textures/earth/clouds.png');
 
@@ -287,8 +303,6 @@ const scene = new THREE.Scene();
     new THREE.SphereGeometry(1, 32, 32),
     new THREE.MeshPhongMaterial({
         map: earthTexture,
-        displacementMap: earthHeightTexture,
-        displacementScale: 0.01,
         specularMap: earthSpecularTexture,
         specular: new THREE.Color('grey'),
         shininess: 15
@@ -305,6 +319,8 @@ const clouds = new THREE.Mesh(
     })
 );
 scene.add(clouds);
+
+console.log(clouds)
 
 // Marqueurs
 createPins();
