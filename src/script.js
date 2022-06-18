@@ -56,7 +56,7 @@ export async function createPins(limit, mag){
                     <input type="hidden" name="mag" value="${earthquake.properties.mag}">
                     <input type="hidden" name="time" value="${date.toLocaleString('en-GB')}">
                     <p class="time">${date.toLocaleString('en-GB')}</p>
-                    <input type="submit" value="Centrer caméra">
+                    <input type="submit" value="Locate">
                     <p>${earthquake.properties.flynn_region} - ${earthquake.properties.mag}</p>
                 </form>
         `;
