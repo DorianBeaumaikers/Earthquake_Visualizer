@@ -10,8 +10,8 @@ import * as dat from 'lil-gui';
 /**
  * Récupère une liste des 20 derniers tremblements de terre
  */
- async function fetchEarthquakes() {
-    const response = await fetch('https://www.seismicportal.eu/fdsnws/event/1/query?limit=20&format=json');
+ async function fetchEarthquakes(limit = 20, mag = 0) {
+    const response = await fetch('https://www.seismicportal.eu/fdsnws/event/1/query?orderby=time&limit='+limit+'&format=json&minmag='+mag);
     // waits until the request completes...
     return await response.json();
 }
@@ -19,13 +19,13 @@ import * as dat from 'lil-gui';
 /**
  * Converti une latitude et longitude en une position x,y et z
  */
-function convertLatLonToCartesian(lat, lon){
+function convertLatLonToCartesian(lat, lon, radius){
     var phi = (90-lat) * (Math.PI/180);
     var theta = (lon+180) * (Math.PI/180);
 
-    let x = -(Math.sin(phi) * Math.cos(theta));
-    let y = Math.cos(phi);
-    let z = (Math.sin(phi) * Math.sin(theta));
+    let x = radius * -(Math.sin(phi) * Math.cos(theta));
+    let y = radius * Math.cos(phi);
+    let z = radius * (Math.sin(phi) * Math.sin(theta));
     return {
         x, y, z
     }
@@ -34,12 +34,33 @@ function convertLatLonToCartesian(lat, lon){
 /**
  * Crée un marqueur pour chaque tremblement de terre
  */
-export async function createPins(){
-    const earthquakesData = await fetchEarthquakes();
+export async function createPins(limit, mag){
+    const earthquakesData = await fetchEarthquakes(limit, mag);
 
-    //console.log(earthquakesData.features)
+    console.log(earthquakesData.features)
+
+    let listeDiv = document.querySelector("#liste");
 
     earthquakesData.features.forEach(earthquake => {
+
+        let date = new Date(earthquake.properties.time);
+
+        let li = document.createElement("li");
+        li.innerHTML = `
+                <form class="quake">
+                    <input type="hidden" name="region" value="${earthquake.properties.flynn_region}">
+                    <input type="hidden" name="lat" value="${earthquake.properties.lat}">
+                    <input type="hidden" name="lon" value="${earthquake.properties.lon}">
+                    <input type="hidden" name="depth" value="${earthquake.properties.depth}">
+                    <input type="hidden" name="mag" value="${earthquake.properties.mag}">
+                    <input type="hidden" name="time" value="${date.toLocaleString('en-GB')}">
+                    <p class="time">${date.toLocaleString('en-GB')}</p>
+                    <input type="submit" value="Centrer caméra">
+                    <p>${earthquake.properties.flynn_region} - ${earthquake.properties.mag}</p>
+                </form>
+        `;
+        listeDiv.append(li);
+
         const pin = new THREE.Mesh(
             new THREE.SphereGeometry(0.015, 20, 20),
             new THREE.MeshBasicMaterial({color: 0xff0000})
@@ -51,7 +72,7 @@ export async function createPins(){
         pin.lon = earthquake.properties.lon;
         pin.depth = earthquake.properties.depth;
         pin.region = earthquake.properties.flynn_region;
-        pin.time = earthquake.properties.time;
+        pin.time = date.toLocaleString('en-GB');
 
         // Donne une couleur au marqueur selon la magnitude
         switch (Math.floor(earthquake.properties.mag)) {
@@ -95,15 +116,11 @@ export async function createPins(){
                 pin.material.color.set("#cc0001");
                 break;
 
-            case 10:
-                pin.material.color.set("#ae0001");
-                break;
-
             default:
                 break;
         }
 
-        let pos = convertLatLonToCartesian(earthquake.properties.lat, earthquake.properties.lon);
+        let pos = convertLatLonToCartesian(earthquake.properties.lat, earthquake.properties.lon, 1);
 
         pin.position.set(pos.x, pos.y, pos.z)
 
@@ -111,10 +128,77 @@ export async function createPins(){
 
         pins.push(pin);
     });
+
+    document.querySelectorAll("#liste .quake").forEach(quake => {
+        quake.onsubmit = function(e){
+            e.preventDefault();
+            
+            let pos = convertLatLonToCartesian(Number(e.target.elements.lat.value), Number(e.target.elements.lon.value), 2);
+    
+            camera.position.set(pos.x, pos.y, pos.z);
+
+            let infos = document.querySelector("#infos");
+
+            infos.querySelector("#region").innerHTML = e.target.elements.region.value;
+            infos.querySelector("#lat").innerHTML = e.target.elements.lat.value;
+            infos.querySelector("#lon").innerHTML = e.target.elements.lon.value;
+            infos.querySelector("#depth").innerHTML = e.target.elements.depth.value + " km";
+            infos.querySelector("#mag").innerHTML = e.target.elements.mag.value;
+            infos.querySelector("#time").innerHTML = e.target.elements.time.value;
+
+            infos.style.visibility = "visible";
+        }
+    });
 }
 
 /**
- * Base
+ * Non-ThreeJS
+ */
+
+let events = true;
+
+const disableEvents = document.querySelectorAll(".disable-event");
+
+disableEvents.forEach(disableEvent => {
+    disableEvent.addEventListener("mouseenter", () => (events = false));
+    disableEvent.addEventListener("mouseleave", () => (events = true));
+});
+
+document.querySelector('#filter').onsubmit = function(e){
+    e.preventDefault();
+    let limit = e.target.elements.limit.value;
+    let mag = e.target.elements.mag.value;
+
+    document.querySelector("#liste").innerHTML = "";
+
+    pins.forEach(pin => {
+        pin.material.dispose();
+        pin.geometry.dispose();
+        scene.remove(pin)
+    });
+
+    createPins(limit, mag);
+};
+
+document.querySelector("#openPanel").addEventListener("click", function(e) {
+    document.querySelector("#interactPanel").style.left = "0";
+})
+
+document.querySelector("#closePanel").addEventListener("click", function(e) {
+    document.querySelector("#interactPanel").style.left = "-500px";
+})
+
+document.querySelector("#openMoreInfos").addEventListener("click", function(e) {
+    document.querySelector("#moreInfos").style.right = "0";
+})
+
+document.querySelector("#closeMoreInfos").addEventListener("click", function(e) {
+    document.querySelector("#moreInfos").style.right = "-35%";
+})
+
+
+/**
+ * ThreeJS
  */
 // Debug
 const gui = new dat.GUI();
@@ -276,16 +360,14 @@ window.addEventListener('mousedown', () => {
             infos.querySelector("#region").innerHTML = currentIntersect.object.region;
             infos.querySelector("#lat").innerHTML = currentIntersect.object.lat;
             infos.querySelector("#lon").innerHTML = currentIntersect.object.lon;
-            infos.querySelector("#depth").innerHTML = currentIntersect.object.depth;
+            infos.querySelector("#depth").innerHTML = currentIntersect.object.depth + " km";
             infos.querySelector("#mag").innerHTML = currentIntersect.object.mag;
-            let date = new Date(currentIntersect.object.time);
-            infos.querySelector("#time").innerHTML = date.toLocaleString('en-GB');
+            infos.querySelector("#time").innerHTML = currentIntersect.object.time;
 
             infos.style.visibility = "visible";
         }
         else{
-            if(lastClicked != null){
-                //lastClicked.object.material.color.set('#FF0000');
+            if(events){
                 infos.style.visibility = "hidden";
             }
         }
