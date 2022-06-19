@@ -1,16 +1,7 @@
-# Three.js Journey
+# Earthquake Visualizer
 
-## Setup
-Download [Node.js](https://nodejs.org/en/download/).
-Run this followed commands:
+My first ThreeJs project. It gets the latest earthquakes from the Seismic Portal API and puts them on a 3D representation of Earth.
 
-``` bash
-# Install dependencies (only the first time)
-npm install
+Thanks to Bruno Simon and his ThreeJs course "ThreeJs Journey".
 
-# Run the local server at localhost:8080
-npm run dev
-
-# Build for production in the dist/ directory
-npm run build
-```
+You see the app in action at https://earthquake-visualizer.vercel.app/

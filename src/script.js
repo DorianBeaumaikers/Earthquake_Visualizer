@@ -9,11 +9,11 @@ import { gsap } from 'gsap'
  */
 
 /**
- * Récupère une liste des 20 derniers tremblements de terre
+ * Fetch the latest earthquakes. Accepts a limit et minimum magnitude as variables
  */
  async function fetchEarthquakes(limit = 20, mag = 0) {
     const response = await fetch('https://www.seismicportal.eu/fdsnws/event/1/query?orderby=time&limit='+limit+'&format=json&minmag='+mag);
-    // waits until the request completes...
+    // Status = 204 if no earthquakes are found
     if(response["status"] == 204){
         return false
     }
@@ -23,7 +23,7 @@ import { gsap } from 'gsap'
 }
 
 /**
- * Converti une latitude et longitude en une position x,y et z
+ * Converts a latitude and longitude to a cartesian model x, y and z
  */
 function convertLatLonToCartesian(lat, lon, radius){
     var phi = (90-lat) * (Math.PI/180);
@@ -38,7 +38,7 @@ function convertLatLonToCartesian(lat, lon, radius){
 }
 
 /**
- * Crée un marqueur pour chaque tremblement de terre
+ * Creates a pin for each earthquake
  */
 export async function createPins(limit, mag){
     const earthquakesData = await fetchEarthquakes(limit, mag);
@@ -55,6 +55,7 @@ export async function createPins(limit, mag){
 
             let date = new Date(earthquake.properties.time);
     
+            // Creates the liste in the interactive panel
             let li = document.createElement("li");
             li.innerHTML = `
                     <form class="quake">
@@ -76,7 +77,7 @@ export async function createPins(limit, mag){
                 new THREE.MeshBasicMaterial({color: 0xff0000})
             )
     
-            // Enregistre les propriétés du tremblement de terre
+            // Save the earthquake properties in the pin
             pin.mag = earthquake.properties.mag;
             pin.lat = earthquake.properties.lat;
             pin.lon = earthquake.properties.lon;
@@ -84,7 +85,7 @@ export async function createPins(limit, mag){
             pin.region = earthquake.properties.flynn_region;
             pin.time = date.toLocaleString('en-GB');
     
-            // Donne une couleur au marqueur selon la magnitude
+            // Change the pin color depending on its magnitude
             switch (Math.floor(earthquake.properties.mag)) {
                 case 0:
                     pin.material.color.set("#6fcdb1");
@@ -140,6 +141,7 @@ export async function createPins(limit, mag){
         });
     }
 
+    // Functionnality for the "Locate" buttons in the list
     document.querySelectorAll("#liste .quake").forEach(quake => {
         quake.onsubmit = function(e){
             e.preventDefault();
@@ -163,22 +165,27 @@ export async function createPins(limit, mag){
 }
 
 /**
- * Non-ThreeJS
- */
+ * Interative Panel
+*/
 
 let events = true;
 
 const disableEvents = document.querySelectorAll(".disable-event");
 
+// Used to disable some functionnalities when mousing over the interactive panel
 disableEvents.forEach(disableEvent => {
     disableEvent.addEventListener("mouseenter", () => (events = false));
     disableEvent.addEventListener("mouseleave", () => (events = true));
 });
 
+// // Functionnality for the "Refresh" button in the interactive panel
 document.querySelector('#filter').onsubmit = function(e){
     e.preventDefault();
     let limit = e.target.elements.limit.value;
     let mag = e.target.elements.mag.value;
+
+    let infos = document.querySelector("#infos");
+    infos.style.visibility = "hidden";
 
     document.querySelector("#liste").innerHTML = "";
 
@@ -190,6 +197,8 @@ document.querySelector('#filter').onsubmit = function(e){
 
     createPins(limit, mag);
 };
+
+// "Toggle Sidepanel" and "?" Buttons
 
 document.querySelector("#openPanel").addEventListener("click", function(e) {
     document.querySelector("#interactPanel").style.left = "0";
@@ -215,7 +224,7 @@ document.querySelector("#closeMoreInfos").addEventListener("click", function(e) 
 const gui = new dat.GUI();
 gui.hide();
 
-// Propriétés
+// Properties
 const pins = [];
 
 // Canvas
@@ -268,7 +277,7 @@ const scene = new THREE.Scene();
  const cloudsTexture = textureLoader.load('/textures/earth/clouds.png');
 
  /**
- * Overlay
+ * Overlay for Loading Bar
  */
   const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1)
   const overlayMaterial = new THREE.ShaderMaterial({
@@ -320,9 +329,7 @@ const clouds = new THREE.Mesh(
 );
 scene.add(clouds);
 
-console.log(clouds)
-
-// Marqueurs
+// Pins
 createPins();
 
 /**
@@ -422,12 +429,6 @@ window.addEventListener('mousedown', () => {
         let infos = document.querySelector("#infos");
         if(currentIntersect)
         {
-            if(lastClicked != null){
-                if(currentIntersect != lastClicked){
-                    //lastClicked.object.material.color.set('#FF0000');
-                }
-            }
-            //currentIntersect.object.material.color.set('#00FF00');
             lastClicked = currentIntersect;
             
             infos.querySelector("#region").innerHTML = currentIntersect.object.region;
@@ -484,20 +485,10 @@ const tick = () =>
 
     if(intersects.length)
     {
-        if(!currentIntersect)
-        {
-            //console.log('mouse enter')
-        }
-
         currentIntersect = intersects[0]
     }
     else
     {
-        if(currentIntersect)
-        {
-            //console.log('mouse leave')
-        }
-        
         currentIntersect = null;
     }
 
